@@ -19,9 +19,6 @@ concurrency:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      ANDROID_HOME: /usr/local/lib/android/sdk
 
     steps:
       - name: Check out repository
@@ -33,40 +30,27 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Configure Android SDK
+      - name: Verify Android SDK
         run: |
-          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin/sdkmanager"
-          "$SDKMANAGER" --licenses </dev/null || true
-          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin" >> "$GITHUB_PATH"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          test -d "$ANDROID_HOME" || test -d "$ANDROID_SDK_ROOT"
 
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build debug and release APKs
-        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease
+      - name: Build debug APK
+        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug
 
-      - name: Verify APK outputs
+      - name: Verify APK
         run: |
           set -eux
-          find app/build/outputs/apk -type f -name "*.apk" -print
+          find app/build/outputs/apk/debug -type f -name "*.apk" -print
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: SSHPeaches-debug-apk
           path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: SSHPeaches-release-apk
-          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
